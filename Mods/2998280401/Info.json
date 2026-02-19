@@ -1,0 +1,1 @@
+{"Name":"门派交易物品增多","DisplayName":"门派交易物品增多","GameVersion":1.24,"Version":1.1,"Desc":"[作者]\r\n    zenton\r\n[简介]\r\n上调门派交易配置，从默认10天刷新3种上调到刷新50种，减少SL次数\n同时将门派交易里开局才能刷出的物品调整为全部刷出","Author":"zd","UIPackage":null,"ID":"2998280401","Flag":263921145,"Tags":["Function","Usability","ExcludeRealmsHeaven"],"IncreasedDesc":"","IsInsideCreat":false,"Previews":[],"ParentModInfo":null}

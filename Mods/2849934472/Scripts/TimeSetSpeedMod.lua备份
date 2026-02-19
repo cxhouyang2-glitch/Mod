@@ -1,0 +1,205 @@
+TimeSetSpeedMod = GameMain:GetMod("TimeSetSpeedMod");
+----Setting(设置)------
+TimeSetSpeedMod.Icon="res/Sprs/object/object_tianlin01";---可设置为自己喜欢的图标
+TimeSetSpeedMod.speedLength = 5;---倍速按钮的速度间隔(步长),如:改为3,每按一次E讲加3倍的游戏速度
+TimeSetSpeedMod.MaxSpeedUp=false;---急速按钮点亮期间,按E是否自动切换为暂停,[true,false]
+TimeSetSpeedMod.MaxSpeedDown=false;---急速按钮点亮期间,按Q是否自动切换为暂停,[true,false]
+
+-----------------------
+function TimeSetSpeedMod:OnRender()
+	if TimeSetSpeedMod.HadInt == true then
+		return ;
+	end
+	local UIInfo = CS.Wnd_GameMain.Instance.UIInfo
+	if UIInfo == nil then
+		return
+	end
+	TimeSetSpeedMod.UIInfo=CS.Wnd_GameMain.Instance.UIInfo;
+	TimeSetSpeedMod.SpeedList = TimeSetSpeedMod.UIInfo.m_gameplay;
+	
+	local SpeedList = TimeSetSpeedMod.SpeedList;
+	--print(SpeedList:GetFromPool())
+	if SpeedList == nil then
+		return
+	end
+	local pd = TimeSetSpeedMod.UIInfo.m_ElementShow;
+	TimeSetSpeedMod.HadInt = true
+	local ElementBtn = TimeSetSpeedMod.UIInfo.m_ShowElement;
+	TimeSetSpeedMod.Savex = ElementBtn.x;
+	TimeSetSpeedMod.SaveBtn=ElementBtn;
+	if SpeedList.numChildren > 5 then
+		print("游戏速度按钮组已经被修改!");
+		TimeSetSpeedMod.SpeedBtn=SpeedList:GetChildAt(4);
+		return false;
+	end
+	TimeSetSpeedMod.SpeedBarLength=SpeedList.width;
+	TimeSetSpeedMod.SpeedBarIconCount=SpeedList.numChildren;
+	--SpeedList.onClickItem:Add(TimeSetSpeedMod.OnSpeedListMenuClick);
+	--SpeedList.width=SpeedList.width-3;
+	--ElementBtn.y = SpeedList.y;
+	--Spr\Object\object_test.png
+	--print(SpeedBtn.m_icon.icon)
+	--SpeedBtn.m_icon.icon = "ui://0xrxw6g7iqu5ovob";
+	if CS.XiaWorld.GlobleDataMgr~=nil and CS.XiaWorld.GlobleDataMgr.Instance~=nil then
+		TimeSetSpeedMod.GlobleDataMgr=CS.XiaWorld.GlobleDataMgr.Instance;
+		TimeSetSpeedMod.MaxSpeed2=TimeSetSpeedMod.GlobleDataMgr:GetInt("MaxSpeed", 2);
+		TimeSetSpeedMod.MaxSpeed = TimeSetSpeedMod.MaxSpeed2 + 3;
+		
+	else
+		return false;
+	end
+	if CS.XiaWorld.MainManager~=nil and CS.XiaWorld.MainManager.Instance~=nil then
+		TimeSetSpeedMod.MainManager=CS.XiaWorld.MainManager.Instance;
+	else
+		return false;
+	end
+	if CS.XiaWorld.Wnd_GameMain~=nil and CS.XiaWorld.Wnd_GameMain.Instance~=nil then
+		TimeSetSpeedMod.Wnd_GameMain=CS.XiaWorld.Wnd_GameMain.Instance;
+	else
+		return false;
+	end
+	if TimeSetSpeedMod.MaxSpeed<0 or TimeSetSpeedMod.MaxSpeed > 40 then
+		return false;
+	end
+	TimeSetSpeedMod.SetBtn(true);
+	
+	
+	TimeSetSpeedMod.speed = 1;
+	TimeSetSpeedMod.CanRun = true;
+	return true;
+end
+function TimeSetSpeedMod.SetBtn(IsOn)
+	
+	if IsOn then
+		if TimeSetSpeedMod.HadInt then
+			local SpeedList = TimeSetSpeedMod.SpeedList;
+			local ElementBtn = TimeSetSpeedMod.SaveBtn;
+			SpeedList.width=TimeSetSpeedMod.SpeedBarLength/TimeSetSpeedMod.SpeedBarIconCount*(TimeSetSpeedMod.SpeedBarIconCount+1);
+			ElementBtn.x = SpeedList.x + (SpeedList.width*0.9);
+			local MyPool = SpeedList:GetFromPool(nil);
+			TimeSetSpeedMod.SpeedBtn=SpeedList:AddChildAt(MyPool, 4);
+			TimeSetSpeedMod.SpeedBtn.name = "fast3"
+			TimeSetSpeedMod.SpeedBtn.tooltips = XT(tostring(TimeSetSpeedMod.MaxSpeed + TimeSetSpeedMod.speedLength).."倍速\n[keycode]SpeedP[/keycode]  降低速度\n[keycode]SpeedN[/keycode]  提升速度");
+			SpeedList.onClickItem:Add(TimeSetSpeedMod.OnSpeedListMenuClick);
+				TimeSetSpeedMod.SpeedBtn.m_icon.icon = TimeSetSpeedMod.Icon;
+			TimeSetSpeedMod.SpeedBtn.m_icon.fill=CS.FairyGUI.FillType.Scale;
+			GameMain:GetMod("_Event"):RegisterEvent(g_emEvent.GameSpeedChange, TimeSetSpeedMod.OnGameSpeedChange, "TimeSetSpeedMod");
+		else
+			if TimeSetSpeedMod.SpeedInte~=nil then
+				TimeSetSpeedMod.SpeedInte();
+			end
+		end
+		TimeSetSpeedMod.CanRun=true;
+	else
+		if TimeSetSpeedMod.SpeedBtn~=nil then
+			--print("zheh")
+			local SpeedList = TimeSetSpeedMod.SpeedList;
+			local ElementBtn = TimeSetSpeedMod.SaveBtn;
+			SpeedList.width=TimeSetSpeedMod.SpeedBarLength;
+			ElementBtn.x = TimeSetSpeedMod.Savex;
+			SpeedList:RemoveChildToPool(TimeSetSpeedMod.SpeedBtn);
+			GameMain:GetMod("_Event"):UnRegisterEvent(g_emEvent.GameSpeedChange, "TimeSetSpeedMod");
+			SpeedList.onClickItem:Remove(TimeSetSpeedMod.OnSpeedListMenuClick);
+		end
+		TimeSetSpeedMod.CanRun=false;
+	end
+	
+end
+function TimeSetSpeedMod:OnGameSpeedChange(_, ParamArray)
+	if TimeSetSpeedMod.TopBtnClick==true then
+		return;
+	end
+	local fGameSpeed = ParamArray[0];
+	local maxSpeed = TimeSetSpeedMod.MaxSpeed;
+	if fGameSpeed >= (TimeSetSpeedMod.MaxSpeed + TimeSetSpeedMod.speedLength) then
+		TimeSetSpeedMod.UIInfo.m_gameplay.selectedIndex = 4;
+		TimeSetSpeedMod.SpeedBtn.tooltips = XT(tostring(math.modf(fGameSpeed)).."倍速\n[keycode]SpeedP[/keycode]  降低速度\n[keycode]SpeedN[/keycode]  提升速度");
+	else
+		TimeSetSpeedMod.SpeedBtn.tooltips = XT(tostring(TimeSetSpeedMod.MaxSpeed + TimeSetSpeedMod.speedLength).."倍速\n[keycode]SpeedP[/keycode]  降低速度\n[keycode]SpeedN[/keycode]  提升速度");
+	end
+	--if fGameSpeed == 1 and TimeSetSpeedMod.speed>10 then
+	--	TimeSetSpeedMod.speed = 1;
+	--elseif fGameSpeed == 2 and TimeSetSpeedMod.speed>10 then
+	--	TimeSetSpeedMod.speed = 2;
+	--elseif (fGameSpeed > 2 and fGameSpeed < TimeSetSpeedMod.MaxSpeed + TimeSetSpeedMod.speedLength) and TimeSetSpeedMod.speed>(TimeSetSpeedMod.MaxSpeed + 5) then
+	--	TimeSetSpeedMod.speed = maxSpeed;
+	--end
+end
+function TimeSetSpeedMod.OnSpeedListMenuClick(Event)
+	if not TimeSetSpeedMod.CanRun then
+		return;
+	end
+	local PlayBtn = Event.data;
+	--TimeSetSpeedMod.MaxSpeed=TimeSetSpeedMod.GlobleDataMgr:GetInt("MaxSpeed", 2) + 3;
+	TimeSetSpeedMod.MaxSpeed2=TimeSetSpeedMod.GlobleDataMgr:GetInt("MaxSpeed", 2);
+	TimeSetSpeedMod.MaxSpeed = TimeSetSpeedMod.MaxSpeed2 + 3;
+		
+	local maxSpeed = TimeSetSpeedMod.MaxSpeed;
+	if InputMgr:GetInputKeyDown("SpeedN") then
+		if TimeSetSpeedMod.MaxSpeedUp then
+			if TimeSetSpeedMod.TopBtnClick==true then
+				TimeSetSpeedMod.MainManager:Pause(false);
+				TimeSetSpeedMod.speed=TimeSetSpeedMod.MaxSpeed + TimeSetSpeedMod.speedLength;
+				TimeSetSpeedMod.TopBtnClick=false;
+				return;
+			end
+		end
+		TimeSetSpeedMod.TopBtnClick=false;
+		if TimeSetSpeedMod.TheLastClickBtn == "fast2" then
+			TimeSetSpeedMod.TheLastClickBtn = "fast3";
+			TimeSetSpeedMod.speed=TimeSetSpeedMod.MaxSpeed + TimeSetSpeedMod.speedLength;
+			TimeSetSpeedMod.MainManager:Play(TimeSetSpeedMod.speed, false);
+			return;
+		elseif TimeSetSpeedMod.TheLastClickBtn == "fast3" or TimeSetSpeedMod.TheLastClickBtn == "fast4" then
+			TimeSetSpeedMod.TheLastClickBtn = "fast4";
+			TimeSetSpeedMod.speed=TimeSetSpeedMod.speed + TimeSetSpeedMod.speedLength;
+			if TimeSetSpeedMod.speed > 60 then
+				TimeSetSpeedMod.speed = 60;
+			end
+			TimeSetSpeedMod.MainManager:Play(TimeSetSpeedMod.speed, false);
+			return;
+		end
+		
+	elseif InputMgr:GetInputKeyDown("SpeedP") then
+		if TimeSetSpeedMod.MaxSpeedDown then
+			if TimeSetSpeedMod.TopBtnClick==true then
+				TimeSetSpeedMod.MainManager:Pause(false);
+				TimeSetSpeedMod.speed=TimeSetSpeedMod.MaxSpeed + TimeSetSpeedMod.speedLength;
+				TimeSetSpeedMod.TopBtnClick=false;
+				return;
+			end
+		end
+		TimeSetSpeedMod.TopBtnClick=false;
+		if TimeSetSpeedMod.TheLastClickBtn == "fast4" then
+			TimeSetSpeedMod.TheLastClickBtn = "fast3";
+			TimeSetSpeedMod.speed=maxSpeed;
+			TimeSetSpeedMod.MainManager:Play(maxSpeed, false);
+			return;
+		end
+		
+	end
+	TimeSetSpeedMod.TheLastClickBtn = PlayBtn.name
+	if PlayBtn.name == "fast3" then
+		TimeSetSpeedMod.MainManager:Play(TimeSetSpeedMod.MaxSpeed + 5, false);
+		TimeSetSpeedMod.speed=TimeSetSpeedMod.MaxSpeed + 5;
+		TimeSetSpeedMod.TopBtnClick=false;
+	elseif PlayBtn.name =="top" then
+		TimeSetSpeedMod.TopBtnClick=true;
+		TimeSetSpeedMod.UIInfo.m_gameplay.selectedIndex = 5;
+	else
+		TimeSetSpeedMod.speed=TimeSetSpeedMod.MainManager.gamespeed;
+		TimeSetSpeedMod.TopBtnClick=false;
+	end
+	return;
+end
+
+function TimeSetSpeedMod.SetRule(num)
+	if num==nil then
+		num=5;
+	elseif num<1 then
+		num=1;
+	elseif num>20 then
+		num=20;
+	end
+	TimeSetSpeedMod.speedLength=num;
+end
